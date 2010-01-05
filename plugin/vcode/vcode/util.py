@@ -76,5 +76,4 @@ def colorDiffCommand(cmd):
 	p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 	stdout = p.communicate()[0]
 	lines = stdout.split(linesep)
-	print lines
 	colorDiff("\\ ".join(cmd), lines)
