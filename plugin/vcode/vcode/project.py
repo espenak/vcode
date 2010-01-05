@@ -1,28 +1,8 @@
 import sys
 import vim
-from os.path import splitext
 from fnmatch import fnmatch
+from util import goToWindowByBufName
 
-
-def vCodeGoToWindowByNr(nr):
-	vim.command('exec %d . "wincmd w"' % nr)
-
-def vCodeWindowNrFromName(name):
-	return int(vim.eval("bufwinnr('^%s$')" % name))
-
-def vCodeCurrentTabNr():
-	return int(vim.eval("tabpagenr()"))
-
-def vCodeGoToWindowByBufName(name):
-	orig = vCodeCurrentTabNr()
-	while True:
-		nr = vCodeWindowNrFromName(name)
-		if nr >= 0:
-			vCodeGoToWindowByNr(nr)
-			return True
-		vim.command("tabnext")
-		if vCodeCurrentTabNr() == orig:
-			return False
 
 
 
@@ -258,15 +238,16 @@ class VCodeProjectBrowser(object):
 			self._redrawTree()
 		else:
 			vim.command("tabedit %s" % item.filename)
+			vim.command("tabmove")
 			if alt:
-				vim.command("tabprevious")
+				self.moveCursorTo()
 
 	def open(self):
 		if not self.moveCursorTo():
 			self._createBuffer()
 
 	def moveCursorTo(self):
-		return vCodeGoToWindowByBufName(self.BUFNAME)
+		return goToWindowByBufName(self.BUFNAME)
 
 
 
@@ -310,15 +291,3 @@ class VCodeProject(object):
 		)
 		self.ui = VCodeUserInterface(self.fileindex)
 		self.ui.show()
-
-
-def altHeaderFile():
-	name = vim.current.buffer.name
-	root, ext = splitext(name)
-	if ext == ".h":
-		ext = ".c"
-	elif ext == ".c":
-		ext = ".h"
-	else:
-		return
-	vim.command("edit + %s%s" % (root, ext))
