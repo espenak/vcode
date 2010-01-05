@@ -10,7 +10,7 @@ from util import goToWindowByBufName
 # File tree management
 ##############################################################
 
-class VCodeFileTreeItem(object):
+class FileTreeItem(object):
 	def __init__(self, title, filename, depth):
 		self.title = title
 		self.filename = filename
@@ -28,17 +28,17 @@ class VCodeFileTreeItem(object):
 		return self.meta[cls.__name__]
 
 
-class VCodeFile(VCodeFileTreeItem):
+class File(FileTreeItem):
 	def __init__(self, title, filename, depth):
-		super(VCodeFile, self).__init__(title, filename, depth)
+		super(File, self).__init__(title, filename, depth)
 
 	def listFormat(self, depth):
 		return self.listFormatPrefix(depth) + "|-" + self.title
 
 
-class VCodeFolder(VCodeFileTreeItem):
+class Group(FileTreeItem):
 	def __init__(self, title, filename, depth, *items):
-		super(VCodeFolder, self).__init__(title, filename, depth)
+		super(Group, self).__init__(title, filename, depth)
 		self.childLst = []
 		self.childDct = {}
 		for item in items:
@@ -64,7 +64,7 @@ class VCodeFolder(VCodeFileTreeItem):
 		""" Recurse the entire tree below this folder, including this folder. """
 		yield self
 		for item in self.childLst:
-			if isinstance(item, VCodeFolder):
+			if isinstance(item, Group):
 				for i in item.iterRecursive():
 					yield i
 			else:
@@ -76,7 +76,7 @@ class VCodeFolder(VCodeFileTreeItem):
 # File index
 ##############################################################
 
-class VCodeFileIndex(object):
+class FileIndex(object):
 	def __init__(self, root):
 		self.root = root
 		self._allItems = [x for x in self.root.iterRecursive()]
@@ -99,7 +99,7 @@ class VCodeFileIndex(object):
 ##############################################################
 
 
-class VCodeProjectBrowserFilter(object):
+class ProjectBrowserFilter(object):
 	def __init__(self, fnpatt=["*"]):
 		self.fnpatt = fnpatt
 
@@ -110,7 +110,7 @@ class VCodeProjectBrowserFilter(object):
 		return False
 
 
-class VCodeProjectBrowser(object):
+class ProjectBrowser(object):
 	STDHEADER = [
 			"\" ? for help",
 			""]
@@ -143,7 +143,7 @@ class VCodeProjectBrowser(object):
 		syntax = (
 			"syn match help #\" .*#",
 			"syn match treePart #|[~+ -]#",
-			"syn match treeVCodeFile #|-.*# contains=treePart",
+			"syn match treeFile #|-.*# contains=treePart",
 			"syn match treeDir #|[+~].*# contains=treePart",
 			"hi def link treePart Special",
 			"hi def link treeDir Statement",
@@ -162,7 +162,7 @@ class VCodeProjectBrowser(object):
 		""" Mark as open or closed folder. """
 		if recursive:
 			for i in folder.iterRecursive():
-				if isinstance(i, VCodeFolder):
+				if isinstance(i, Group):
 					meta = i.getMeta(self.__class__)
 					meta["open"] = open
 		else:
@@ -170,7 +170,7 @@ class VCodeProjectBrowser(object):
 			meta["open"] = open
 
 	def _openOrCloseFolder(self, folder, open=True, recursive=False):
-		if not isinstance(folder, VCodeFolder):
+		if not isinstance(folder, Group):
 			return
 		self._setOpenFolder(folder, open, recursive)
 		self._generateDisplay()
@@ -179,7 +179,7 @@ class VCodeProjectBrowser(object):
 		l = []
 		for item in self._displayedItems:
 			prefix = "".join(["| " for x in xrange(item.depth)])
-			if isinstance(item, VCodeFolder):
+			if isinstance(item, Group):
 				l.append("%s|~%s/" % (prefix, item.title))
 			else:
 				l.append("%s|-%s" % (prefix, item.title))
@@ -198,7 +198,7 @@ class VCodeProjectBrowser(object):
 		self._displayedItems.append(folder)
 		if self._isOpen(folder):
 			for item in folder.iterChildren():
-				if isinstance(item, VCodeFolder):
+				if isinstance(item, Group):
 					self._addToDisplay(item)
 				else:
 					self._addThroughFilter(item)
@@ -233,7 +233,7 @@ class VCodeProjectBrowser(object):
 		index, item = self._getItemUnderCursor()
 		if index < 0:
 			return
-		if isinstance(item, VCodeFolder):
+		if isinstance(item, Group):
 			self._openOrCloseFolder(item, not self._isOpen(item), recursive=alt)
 			self._redrawTree()
 		else:
@@ -257,37 +257,33 @@ class VCodeProjectBrowser(object):
 # User Interface
 ##############################################################
 
-class VCodeUserInterface(object):
-	PREFIX = "VCode"
-	PROJEXP_BUF = PREFIX + "ProjectExplorer"
-	PREVIEW_BUF = PREFIX + "Preview"
-
+class UserInterface(object):
 	def __init__(self, fileindex):
 		self.items = fileindex
-		self.view = VCodeProjectBrowser(self.items)
+		self.view = ProjectBrowser(self.items)
 
 	def show(self):
 		self.view.open()
-		self.view.applyFilter(VCodeProjectBrowserFilter(["*.h", "*.c"]))
+		self.view.applyFilter(ProjectBrowserFilter(["*.h", "*.c"]))
 
 
 
-class VCodeProject(object):
+class Project(object):
 	def __init__(self, path):
-		self.fileindex = VCodeFileIndex(
-			VCodeFolder("Project root", None, 0,
-				VCodeFile("myfile.txt", "~/Desktop/tullball.txt", 1),
-				VCodeFile("stuff.c", "~/Desktop/stuff.c", 1),
-				VCodeFile("stuff.h", "~/Desktop/stuff.h", 1),
-				VCodeFolder("Subdir", None, 1,
-					VCodeFile("thestuff.c", "~/Desktop/stuff.c", 2),
-					VCodeFile("thestuff.h", "~/Desktop/stuff.h", 2),
-					VCodeFolder("SubSubdir", None, 2,
-						VCodeFile("thastuff.c", "~/Desktop/stuff.c", 3),
-						VCodeFile("thastuff.h", "~/Desktop/stuff.h", 3)
+		self.fileindex = FileIndex(
+			Group("Project root", None, 0,
+				File("myfile.txt", "~/Desktop/tullball.txt", 1),
+				File("stuff.c", "~/Desktop/stuff.c", 1),
+				File("stuff.h", "~/Desktop/stuff.h", 1),
+				Group("Subdir", None, 1,
+					File("thestuff.c", "~/Desktop/stuff.c", 2),
+					File("thestuff.h", "~/Desktop/stuff.h", 2),
+					Group("SubSubdir", None, 2,
+						File("thastuff.c", "~/Desktop/stuff.c", 3),
+						File("thastuff.h", "~/Desktop/stuff.h", 3)
 					)
 				)
 			)
 		)
-		self.ui = VCodeUserInterface(self.fileindex)
+		self.ui = UserInterface(self.fileindex)
 		self.ui.show()

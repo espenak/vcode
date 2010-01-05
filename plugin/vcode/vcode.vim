@@ -5,12 +5,23 @@ p = vim.eval("globpath(&runtimepath, 'plugin/vcode')")
 if p:
 	import sys
 	sys.path.append(p)
-	from vcode.project import *
 	import vcode.util
+	import vcode.project
 else:
 	raise EnvironmentError("Could not find plugin/vimcode on runtime path.")
 
-vCodeProj = VCodeProject("tull")
+
+vCodeProj = vcode.project.Project("tull")
+#vcode.util.colorDiff("diffing", [
+#	"Notes:",
+#	"-HELLO",
+#	"-  wrld",
+#	"+hello",
+#	"+  world",
+#])
+
+vcode.util.colorDiffCommand(["git", "diff"])
+
 EOF
 
 
@@ -21,7 +32,14 @@ function VCodeReccomendedKeymaps()
 	au BufNewFile,BufRead *.c map <buffer> <C-M-Up> :python vcode.util.cppAltHeaderFile()<CR>
 	au BufNewFile,BufRead *.cpp map <buffer> <C-M-Up> :python vcode.util.cppAltHeaderFile()<CR>
 	au BufNewFile,BufRead *.hpp map <buffer> <C-M-Up> :python vcode.util.cppAltHeaderFile()<CR>
-	"map <F8> <ESC>:python vCodeProj.ui.view.open()<CR>
+
+	nnoremap <S-C-t> :python vCodeProj.ui.view.open()<CR>
+endfunction
+
+
+function VCodeExtraKeymaps()
+	" <Leader>s --> replace all occurrences of word under cursor.
+	nnoremap <Leader>s :%s/\<<C-r><C-w>\>/
 endfunction
 
 
@@ -34,3 +52,4 @@ endfunction
 
 call VCodeReccomendedSettings()
 call VCodeReccomendedKeymaps()
+call VCodeExtraKeymaps()
