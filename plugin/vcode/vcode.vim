@@ -12,15 +12,7 @@ else:
 
 
 vCodeProj = vcode.project.Project("tull")
-#vcode.util.colorDiff("diffing", [
-#	"Notes:",
-#	"-HELLO",
-#	"-  wrld",
-#	"+hello",
-#	"+  world",
-#])
-
-vcode.util.colorDiffCommand(["git", "diff"])
+#vcode.util.colorDiffCommand(["git", "diff"])
 
 EOF
 
