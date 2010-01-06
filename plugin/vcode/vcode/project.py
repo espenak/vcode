@@ -1,6 +1,6 @@
 import sys
 import vim
-from fnmatch import fnmatch
+import fnmatch
 from util import goToWindowByBufName
 
 
@@ -105,7 +105,7 @@ class ProjectBrowserFilter(object):
 
 	def letThrough(self, f):
 		for patt in self.fnpatt:
-			if fnmatch(f.filename, patt):
+			if fnmatch.fnmatch(f.filename, patt):
 				return True
 		return False
 
@@ -119,7 +119,8 @@ class ProjectBrowser(object):
 
 	def __init__(self, index):
 		self._fileindex = index
-		self._filter = None
+		self._curFilter = None
+		self._filters = {}
 		self._setOpenGroup(self._fileindex.root, open=True)
 		self._generateDisplay()
 		self._curHeader = self.STDHEADER
@@ -198,7 +199,7 @@ class ProjectBrowser(object):
 		return meta.get("open", False)
 
 	def _addThroughFilter(self, f):
-		if self._filter != None and not self._filter.letThrough(f):
+		if self._curFilter != None and not self._curFilter.letThrough(f):
 			return
 		self._displayedItems.append(f)
 
@@ -229,8 +230,17 @@ class ProjectBrowser(object):
 		self._mapKeys()
 		self._redrawTree()
 
-	def applyFilter(self, filter):
-		self._filter = filter
+
+	def autoCompleteFilternames(self):
+		start = vim.eval("a:ArgLead")
+		l = fnmatch.filter(self._filters.keys(), start + "*")
+		vim.command("let result = %s" % repr(l))
+
+	def addFilter(self, name, filter):
+		self._filters[name] = filter
+
+	def applyFilter(self, filterName):
+		self._curFilter = self._filters.get(filterName)
 		self._generateDisplay()
 		self._redrawTree()
 
@@ -297,6 +307,10 @@ class Project(object):
 				)
 			)
 		)
+
 		self.browser = ProjectBrowser(self.fileindex)
+		self.browser.addFilter("c/c++",
+				ProjectBrowserFilter(["*.h", "*.c", "*.cpp", "*.hpp"]))
+		self.browser.addFilter("txt",
+				ProjectBrowserFilter(["*.txt"]))
 		self.browser.open()
-		#self.browser.applyFilter(ProjectBrowserFilter(["*.h", "*.c"]))

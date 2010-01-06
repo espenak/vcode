@@ -14,6 +14,7 @@ else:
 vCodeProj = vcode.project.Project("tull")
 #vcode.util.colorDiffCommand(["git", "diff"])
 
+
 EOF
 
 
@@ -45,3 +46,11 @@ endfunction
 call VCodeReccomendedSettings()
 call VCodeReccomendedKeymaps()
 call VCodeExtraKeymaps()
+
+
+function s:AutoCompleteApplyFilter(ArgLead,L,P)
+	py vCodeProj.browser.autoCompleteFilternames()
+	return result
+endfunction
+command -complete=customlist,s:AutoCompleteApplyFilter -nargs=1 VCodeApplyFilter :py vCodeProj.browser.applyFilter("<args>")
+command VCodeClearFilter :py vCodeProj.browser.clearFilter()
