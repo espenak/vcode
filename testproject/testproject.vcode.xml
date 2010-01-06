@@ -1,0 +1,125 @@
+<vcode name="Test Project" xml:space="preserved">
+
+	<!-- Files to include in the project. -->
+	<files>
+		<exclude>
+			<shellpattern value="*~"/>
+			<shellpattern value="*.pdf"/>
+			<shellpatterns>
+				*.o
+				*.aux
+				*.log
+				*.pyo
+				*.pyc
+				.*.swp
+			</shellpatterns>
+		</exclude>
+
+		<!-- Maven standard layout with python and java sources organized as:
+		java/
+			main/
+			test/
+		python/
+			main/
+			test/
+		-->
+		<group title="java">
+			<dir path="src/main/java" title="main"/>
+			<dir path="src/test/java" title="test"/>
+		</group>
+		<group title="python">
+			<dir path="src/main/python" title="main"/>
+			<dir path="src/test/python" title="test"/>
+			<file path="setup.py" title="setup.py"/>
+		</group>
+		<group title="cpp">
+			<dir path="src/main/cpp" title="main"/>
+			<dir path="src/test/cpp" title="test"/>
+		</group>
+
+		<!-- All files in the project -->
+		<dir title="all"/>
+
+		<!-- *Absolutely* all files in the project - override *exclude*. -->
+		<dir title="absolutely all">
+			<exclude inherit="no"/>
+		</dir>
+
+		<pattern title="Files on toplevel" patt="*"/>
+	</files>
+
+
+	<!-- Filters can be applied at any time when browsing the project. -->
+	<filters>
+		<filter name="latex">
+			<shellpatterns>
+				*.tex
+				*.bib
+			</shellpatterns>
+		</filter>
+		<filter name="python">
+			<shellpatterns>
+				*.py
+			</shellpatterns>
+		</filter>
+		<filter name="c">
+		<shellpatterns>
+				*.c
+				*.h
+			</shellpatterns>
+		</filter>
+		<filter name="c++">
+			<shellpatterns>
+				*.cpp
+				*.hpp
+				*.h
+			</shellpatterns>
+		</filter>
+		<filter name="c++">
+			<shellpatterns>
+				*.cpp
+				*.hpp
+				*.h
+			</shellpatterns>
+		</filter>
+		<filter name="make">
+			<shellpatterns>
+				*.mk
+				Makefile
+			</shellpatterns>
+		</filter>
+
+		<filter name="stuff">
+			<shellpatterns>
+				doc/**/*.txt
+				doc/**/*.rst
+			</shellpatterns>
+			<link name="c++"/>
+			<link name="c"/>
+			<link name="make"/>
+			<link name="latex"/>
+			<link name="python"/>
+		</filter>
+	</filters>
+
+	<!-- Build targets -->
+	<build-targets>
+		<build-target name="stuff">
+			<make target="stuff"/>
+		</build-target>
+		<build-target name="saker">
+			<make target="cmodule"/>
+			<mvn target="compile"/>
+		</build-target>
+	</build-targets>
+
+	<!-- Run targets -->
+	<run-targets>
+		<run-target name="run stuff">
+			<exec cmd="./stuff"/>
+			<exec cmd="python stuff.py"/>
+		</run-target>
+	</run-targets>
+
+</vcode>
+

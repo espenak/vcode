@@ -1,9 +1,14 @@
 import sys
 import vim
 import fnmatch
+from os.path import isdir, join, dirname
+from os import listdir
+from xml.dom import minidom
 from util import goToWindowByBufName
 
 
+
+ENCODING = "utf-8"
 
 
 ##############################################################
@@ -12,7 +17,7 @@ from util import goToWindowByBufName
 
 class FileTreeItem(object):
 	def __init__(self, title, depth):
-		self.title = title
+		self.title = title.encode(ENCODING)
 		self.depth = depth
 		self.meta = {} # a place for other parts of the system to attach metadata
 		self.parent = None
@@ -120,10 +125,10 @@ class ProjectBrowser(object):
 	def __init__(self, index):
 		self._fileindex = index
 		self._curFilter = None
+		self._curHeader = self.STDHEADER
 		self._filters = {}
 		self._setOpenGroup(self._fileindex.root, open=True)
 		self._generateDisplay()
-		self._curHeader = self.STDHEADER
 
 	def _mapKey(self, key, action):
 		vim.command("nmap <buffer> %s %s" % (key, action))
@@ -144,7 +149,8 @@ class ProjectBrowser(object):
 		cursor = vim.current.window.cursor
 		b = vim.current.buffer
 		vim.command("setlocal modifiable")
-		b[:] = self._curHeader + self._toList()
+		l = self._curHeader + self._toList()
+		b[:] = l
 		vim.command("setlocal nomodifiable")
 		vim.current.window.cursor = cursor
 
@@ -219,6 +225,7 @@ class ProjectBrowser(object):
 	def _createBuffer(self):
 		vim.command("tabnew %s" % self.BUFNAME)
 		vim.command("setlocal nonumber")
+		vim.command("setlocal encoding=%s" % ENCODING)
 		vim.command("setlocal buftype=nofile")
 		vim.command("setlocal bufhidden=delete")
 		vim.command("setlocal noswapfile")
@@ -292,21 +299,30 @@ class ProjectBrowser(object):
 
 class Project(object):
 	def __init__(self, path):
-		self.fileindex = FileIndex(
-			Group("Project root", 0,
-				File("myfile.txt", "~/Desktop/tullball.txt", 1),
-				File("stuff.c", "~/Desktop/stuff.c", 1),
-				File("stuff.h", "~/Desktop/stuff.h", 1),
-				Group("Subdir", 1,
-					File("thestuff.c", "~/Desktop/stuff.c", 2),
-					File("thestuff.h", "~/Desktop/stuff.h", 2),
-					Group("SubSubdir", 2,
-						File("thastuff.c", "~/Desktop/stuff.c", 3),
-						File("thastuff.h", "~/Desktop/stuff.h", 3)
-					)
-				)
-			)
-		)
+		#self.fileindex = FileIndex(
+			#Group("Project root", 0,
+				#File("myfile.txt", "~/Desktop/tullball.txt", 1),
+				#File("stuff.c", "~/Desktop/stuff.c", 1),
+				#File("stuff.h", "~/Desktop/stuff.h", 1),
+				#Group("Subdir", 1,
+					#File("thestuff.c", "~/Desktop/stuff.c", 2),
+					#File("thestuff.h", "~/Desktop/stuff.h", 2),
+					#Group("SubSubdir", 2,
+						#File("thastuff.c", "~/Desktop/stuff.c", 3),
+						#File("thastuff.h", "~/Desktop/stuff.h", 3)
+					#)
+				#)
+			#)
+		#)
+
+		self._cwd = dirname(path)
+		dom = minidom.parse(path)
+		self._projectName = dom.documentElement.getAttribute("name")
+
+		files = dom.documentElement.getElementsByTagName("files")[0]
+		head = Group(self._projectName, -1)
+		self._parseFiles(head, files)
+		self.fileindex = FileIndex(head.getByIndex(0))
 
 		self.browser = ProjectBrowser(self.fileindex)
 		self.browser.addFilter("c/c++",
@@ -314,3 +330,43 @@ class Project(object):
 		self.browser.addFilter("txt",
 				ProjectBrowserFilter(["*.txt"]))
 		self.browser.open()
+
+	def _parseFiles(self, parentGroup, f, exclude=[]):
+		if f.nodeType != minidom.Node.ELEMENT_NODE:
+			return
+
+		if f.tagName == "exclude":
+			pass
+		elif f.tagName == "file":
+			parentGroup.add(File(
+				f.getAttribute("title"),
+				join(self._cwd, f.getAttribute("path")),
+				parentGroup.depth+1))
+		elif f.tagName == "dir":
+			group = self._dirToGroup(
+					f.getAttribute("title"),
+					f.getAttribute("path"),
+					parentGroup.depth+1)
+			parentGroup.add(group)
+		elif f.tagName == "files" or f.tagName == "group":
+			if f.tagName == "files":
+				title = self._projectName
+			else:
+				title = f.getAttribute("title")
+			group = Group(title, parentGroup.depth+1)
+			parentGroup.add(group)
+
+			for c in f.childNodes:
+				self._parseFiles(group, c, exclude)
+	
+	def _dirToGroup(self, title, path, depth):
+		g = Group(title, depth)
+		print title
+		path = join(self._cwd, path)
+		for f in listdir(path):
+			p = join(path, f)
+			if isdir(p):
+				g.add(self._dirToGroup(f, p, depth+1))
+			else:
+				g.add(File(f, p, depth+1))
+		return g

@@ -11,7 +11,7 @@ else:
 	raise EnvironmentError("Could not find plugin/vimcode on runtime path.")
 
 
-vCodeProj = vcode.project.Project("tull")
+vCodeProj = vcode.project.Project("/Users/espeak/code/vcode/testproject/testproject.vcode.xml")
 #vcode.util.colorDiffCommand(["git", "diff"])
 
 
