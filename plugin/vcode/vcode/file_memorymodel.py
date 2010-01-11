@@ -30,13 +30,15 @@ class FileTreeItem(object):
 
 class File(FileTreeItem):
 	""" A physical file. """
-	def __init__(self, title, filepath, depth):
+	def __init__(self, title, relPath, absPath, depth):
 		"""
-		@param filepath: The physical path to the file, relative to the
-		location of the project.
+		@param relPath: The physical path to the file,
+			relative to the location of the project.
+		@param absPath: The physical absolute path to the file.
 		"""
 		super(File, self).__init__(title, depth)
-		self.filepath = filepath
+		self.relPath = relPath
+		self.absPath = absPath
 
 	def listFormat(self, depth):
 		return self.listFormatPrefix(depth) + "|-" + self.title

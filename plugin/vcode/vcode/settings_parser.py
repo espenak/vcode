@@ -105,9 +105,11 @@ class FilesParser(object):
 
 
 	def _parseFileNode(self, parentGroup, node):
+		path = node.getAttribute("path")
 		parentGroup.add(File(
 			node.getAttribute("title"),
-			self.getRelativePath(node.getAttribute("path")),
+			self.getRelativePath(path),
+			self.getAbsolutePath(path),
 			parentGroup.depth+1))
 
 	def _parseDir(self, title, path, depth, compiledExcludePatt):
@@ -119,7 +121,7 @@ class FilesParser(object):
 			else:
 				if compiledExcludePatt and compiledExcludePatt.match(p):
 					continue
-				g.add(File(f, p, depth+1))
+				g.add(File(f, p, join(self._rootDir, p), depth+1))
 		return g
 
 	def _parseDirNode(self, parentGroup, node, excludePatt):
@@ -130,7 +132,6 @@ class FilesParser(object):
 			compiledExcludePatt = None
 		path = node.getAttribute("path")
 		title = node.getAttribute("title")
-		print title, excludePatt
 		group = self._parseDir(title, path,
 				parentGroup.depth+1, compiledExcludePatt)
 		parentGroup.add(group)

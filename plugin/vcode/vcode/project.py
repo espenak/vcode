@@ -20,7 +20,7 @@ class ProjectBrowserFilter(object):
 
 	def letThrough(self, f):
 		for patt in self.fnpatt:
-			if fnmatch.fnmatch(f.filepath, patt):
+			if fnmatch.fnmatch(f.absPath, patt):
 				return True
 		return False
 
@@ -172,8 +172,9 @@ class ProjectBrowser(object):
 			self._openOrCloseGroup(item, not self._isOpen(item), recursive=alt)
 			self._redrawTree()
 		else:
-			vim.command("tabedit %s" % item.filepath)
+			vim.command("tabedit %s" % item.absPath)
 			vim.command("tabmove")
+			vim.current.buffer[0] = str(item.absPath)
 			if alt:
 				self.moveCursorTo()
 
