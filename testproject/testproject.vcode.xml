@@ -2,9 +2,9 @@
 
 	<!-- Files to include in the project. -->
 	<files>
+		<!-- Exclude pattern inherited by <dir> tags. Can be overridden or expanded
+				 within <group>-tags, and <dir>-tags. -->
 		<exclude>
-			<shellpattern value="*~"/>
-			<shellpattern value="*.pdf"/>
 			<shellpatterns>
 				*.o
 				*.aux
@@ -13,6 +13,9 @@
 				*.pyc
 				.*.swp
 			</shellpatterns>
+			<pyregex>
+				^.+?.vcode.xml.\d+$
+			</pyregex>
 		</exclude>
 
 		<!-- Maven standard layout with python and java sources organized as:
@@ -38,14 +41,20 @@
 		</group>
 
 		<!-- All files in the project -->
-		<dir title="all"/>
+		<dir title="all" path=""/>
 
 		<!-- *Absolutely* all files in the project - override *exclude*. -->
-		<dir title="absolutely all">
+		<dir title="absolutely all" path="">
 			<exclude inherit="no"/>
 		</dir>
 
-		<pattern title="Files on toplevel" patt="*"/>
+		<dir title="all except java files" path="">
+			<exclude inherit="yes">
+				<shellpatterns>
+					*.java
+				</shellpatterns>
+			</exclude>
+		</dir>
 	</files>
 
 
@@ -65,13 +74,6 @@
 		<filter name="c">
 		<shellpatterns>
 				*.c
-				*.h
-			</shellpatterns>
-		</filter>
-		<filter name="c++">
-			<shellpatterns>
-				*.cpp
-				*.hpp
 				*.h
 			</shellpatterns>
 		</filter>

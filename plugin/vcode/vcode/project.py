@@ -1,101 +1,11 @@
 import sys
 import vim
 import fnmatch
-from os.path import isdir, join, dirname
-from os import listdir
-from xml.dom import minidom
 from util import goToWindowByBufName
 
-
-
-ENCODING = "utf-8"
-
-
-##############################################################
-# File tree management
-##############################################################
-
-class FileTreeItem(object):
-	def __init__(self, title, depth):
-		self.title = title.encode(ENCODING)
-		self.depth = depth
-		self.meta = {} # a place for other parts of the system to attach metadata
-		self.parent = None
-
-	def listFormatPrefix(self, depth):
-		return "".join(["| " for x in xrange(depth)])
-
-	def getMeta(self, cls):
-		""" Get the metadata entry for the given class. """
-		if not cls.__name__ in self.meta:
-			self.meta[cls.__name__] = {}
-		return self.meta[cls.__name__]
-
-
-class File(FileTreeItem):
-	def __init__(self, title, filename, depth):
-		super(File, self).__init__(title, depth)
-		self.filename = filename
-
-	def listFormat(self, depth):
-		return self.listFormatPrefix(depth) + "|-" + self.title
-
-
-class Group(FileTreeItem):
-	def __init__(self, title, depth, *items):
-		super(Group, self).__init__(title, depth)
-		self.childLst = []
-		self.childDct = {}
-		for item in items:
-			self.add(item)
-
-	def getByIndex(self, index):
-		return self.childLst[index]
-
-	def getByTitle(self, title):
-		return self.childDct[title]
-
-	def add(self, item):
-		self.childLst.append(item)
-		self.childDct[item.title] = item
-		item.parent = self
-
-	def iterChildren(self):
-		""" Iterate over the items directly below this folder. """
-		for item in self.childLst:
-			yield item
-
-	def iterRecursive(self):
-		""" Recurse the entire tree below this folder, including this folder. """
-		yield self
-		for item in self.childLst:
-			if isinstance(item, Group):
-				for i in item.iterRecursive():
-					yield i
-			else:
-				yield item
-
-
-
-##############################################################
-# File index
-##############################################################
-
-class FileIndex(object):
-	def __init__(self, root):
-		self.root = root
-		self._allItems = [x for x in self.root.iterRecursive()]
-
-	def __iter__(self):
-		return self._allItems.__iter__()
-
-	def getByIndex(self, index):
-		return self._allItems[index]
-
-	def __getitem__(self, index):
-		return self._allItems[index]
-
-
+from file_memorymodel import FileIndex, Group
+from settings_parser import SettingsParser
+from common import ENCODING
 
 
 
@@ -110,7 +20,7 @@ class ProjectBrowserFilter(object):
 
 	def letThrough(self, f):
 		for patt in self.fnpatt:
-			if fnmatch.fnmatch(f.filename, patt):
+			if fnmatch.fnmatch(f.filepath, patt):
 				return True
 		return False
 
@@ -262,7 +172,7 @@ class ProjectBrowser(object):
 			self._openOrCloseGroup(item, not self._isOpen(item), recursive=alt)
 			self._redrawTree()
 		else:
-			vim.command("tabedit %s" % item.filename)
+			vim.command("tabedit %s" % item.filepath)
 			vim.command("tabmove")
 			if alt:
 				self.moveCursorTo()
@@ -314,15 +224,8 @@ class Project(object):
 				#)
 			#)
 		#)
-
-		self._cwd = dirname(path)
-		dom = minidom.parse(path)
-		self._projectName = dom.documentElement.getAttribute("name")
-
-		files = dom.documentElement.getElementsByTagName("files")[0]
-		head = Group(self._projectName, -1)
-		self._parseFiles(head, files)
-		self.fileindex = FileIndex(head.getByIndex(0))
+		settings = SettingsParser(path)
+		self.fileindex = FileIndex(settings.files)
 
 		self.browser = ProjectBrowser(self.fileindex)
 		self.browser.addFilter("c/c++",
@@ -330,43 +233,3 @@ class Project(object):
 		self.browser.addFilter("txt",
 				ProjectBrowserFilter(["*.txt"]))
 		self.browser.open()
-
-	def _parseFiles(self, parentGroup, f, exclude=[]):
-		if f.nodeType != minidom.Node.ELEMENT_NODE:
-			return
-
-		if f.tagName == "exclude":
-			pass
-		elif f.tagName == "file":
-			parentGroup.add(File(
-				f.getAttribute("title"),
-				join(self._cwd, f.getAttribute("path")),
-				parentGroup.depth+1))
-		elif f.tagName == "dir":
-			group = self._dirToGroup(
-					f.getAttribute("title"),
-					f.getAttribute("path"),
-					parentGroup.depth+1)
-			parentGroup.add(group)
-		elif f.tagName == "files" or f.tagName == "group":
-			if f.tagName == "files":
-				title = self._projectName
-			else:
-				title = f.getAttribute("title")
-			group = Group(title, parentGroup.depth+1)
-			parentGroup.add(group)
-
-			for c in f.childNodes:
-				self._parseFiles(group, c, exclude)
-	
-	def _dirToGroup(self, title, path, depth):
-		g = Group(title, depth)
-		print title
-		path = join(self._cwd, path)
-		for f in listdir(path):
-			p = join(path, f)
-			if isdir(p):
-				g.add(self._dirToGroup(f, p, depth+1))
-			else:
-				g.add(File(f, p, depth+1))
-		return g
