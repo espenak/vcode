@@ -58,6 +58,8 @@ class Group(FileTreeItem):
 		return self.childDct[title]
 
 	def add(self, item):
+		if isinstance(item, Group) and item.isEmpty():
+			return
 		self.childLst.append(item)
 		self.childDct[item.title] = item
 		item.parent = self
@@ -76,6 +78,9 @@ class Group(FileTreeItem):
 					yield i
 			else:
 				yield item
+
+	def isEmpty(self):
+		return len(self.childLst) == 0
 
 
 class FileIndex(object):

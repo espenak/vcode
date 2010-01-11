@@ -1,3 +1,4 @@
+import re
 from os.path import isdir, join, dirname
 from os import listdir, sep
 import fnmatch
@@ -73,9 +74,9 @@ class PatternParser(object):
 
 
 class FilesParser(object):
-	def __init__(self, filesNode, cwd, projectName):
+	def __init__(self, filesNode, rootDir, projectName):
 		self._filesNode = filesNode
-		self._cwd = cwd
+		self._rootDir = rootDir
 		self._projectName = projectName
 
 	def parse(self):
@@ -86,47 +87,61 @@ class FilesParser(object):
 	def _parseExclude(self, node, parentExclude=None):
 		excludeNode = getChildNodeByNodeName(node, "exclude")
 		if excludeNode:
-			regex = PatternParser(excludeNode).toRegex()
-			if not regex:
-				return None
 			inherit = excludeNode.getAttribute("inherit")
-			if parentExclude and inherit:
-				regex = "%s|%s" % (parentExclude, regex)
-			return regex
+			regex = []
+			if parentExclude and inherit == "yes":
+				regex = [parentExclude]
+			
+			p = PatternParser(excludeNode).toRegex()
+			if p:
+				regex.append(p)
+	
+			if regex:
+				return "|".join(regex)
+			else:
+				return None
 		else:
-			return None
+			return parentExclude
 
 
 	def _parseFileNode(self, parentGroup, node):
 		parentGroup.add(File(
 			node.getAttribute("title"),
-			self._getAbsolutePath(node.getAttribute("path")),
+			self.getRelativePath(node.getAttribute("path")),
 			parentGroup.depth+1))
 
-	def _parseDir(self, title, path, depth):
+	def _parseDir(self, title, path, depth, compiledExcludePatt):
 		g = Group(title, depth)
-		for f in listdir(path):
+		for f in listdir(self.getAbsolutePath(path)):
 			p = join(path, f)
-			if isdir(p):
-				g.add(self._parseDir(f, p, depth+1))
+			if isdir(self.getAbsolutePath(p)):
+				g.add(self._parseDir(f, p, depth+1, compiledExcludePatt))
 			else:
+				if compiledExcludePatt and compiledExcludePatt.match(p):
+					continue
 				g.add(File(f, p, depth+1))
 		return g
 
 	def _parseDirNode(self, parentGroup, node, excludePatt):
 		excludePatt = self._parseExclude(node, excludePatt)
-		path = self._getAbsolutePath(node.getAttribute("path"))
-		group = self._parseDir(node.getAttribute("title"), path,
-				parentGroup.depth+1)
+		if excludePatt:
+			compiledExcludePatt = re.compile(excludePatt)
+		else:
+			compiledExcludePatt = None
+		path = node.getAttribute("path")
+		title = node.getAttribute("title")
+		print title, excludePatt
+		group = self._parseDir(title, path,
+				parentGroup.depth+1, compiledExcludePatt)
 		parentGroup.add(group)
 
 	def _parseGroupNode(self, parentGroup, node, title=None, excludePatt=None):
 		excludePatt = self._parseExclude(node, excludePatt)
 		title = title or node.getAttribute("title")
 		group = Group(title, parentGroup.depth+1)
-		parentGroup.add(group)
 		for c in node.childNodes:
 			self._parseNode(group, c, excludePatt)
+		parentGroup.add(group)
 
 	def _parseNode(self, parentGroup, node, excludePatt=None):
 		if node.nodeType != minidom.Node.ELEMENT_NODE:
@@ -138,16 +153,19 @@ class FilesParser(object):
 		elif node.tagName == "group":
 			self._parseGroupNode(parentGroup, node, excludePatt=excludePatt)
 
-	def _getAbsolutePath(self, relativePath):
-		return join(self._cwd, relativePath.replace(PATHNAME_SEP, sep))
+	def getRelativePath(self, relativePath):
+		return relativePath.replace(PATHNAME_SEP, sep)
+
+	def getAbsolutePath(self, relativePath):
+		return join(self._rootDir, self.getRelativePath(relativePath))
 
 
 class SettingsParser(object):
 	def __init__(self, path):
 		self.path = path
-		self.cwd = dirname(path)
+		self.rootDir = dirname(path)
 		self._dom = minidom.parse(path)
 		self.projectName = self._dom.documentElement.getAttribute("name")
 
 		filesNode = getChildNodeByNodeName(self._dom.documentElement, "files")
-		self.files = FilesParser(filesNode, self.cwd, self.projectName).parse()
+		self.files = FilesParser(filesNode, self.rootDir, self.projectName).parse()
