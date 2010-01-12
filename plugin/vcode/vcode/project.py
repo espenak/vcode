@@ -174,7 +174,6 @@ class ProjectBrowser(object):
 		else:
 			vim.command("tabedit %s" % item.absPath)
 			vim.command("tabmove")
-			vim.current.buffer[0] = str(item.absPath)
 			if alt:
 				self.moveCursorTo()
 

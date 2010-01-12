@@ -1,5 +1,6 @@
+from glob import glob
 import re
-from os.path import isdir, join, dirname
+from os.path import isdir, join, dirname, abspath, basename
 from os import listdir, sep
 import fnmatch
 from xml.dom import minidom
@@ -74,15 +75,29 @@ class PatternParser(object):
 
 
 class FilesParser(object):
-	def __init__(self, filesNode, rootDir, projectName):
-		self._filesNode = filesNode
+	def __init__(self, rootDir, projectName):
 		self._rootDir = rootDir
 		self._projectName = projectName
+		dom  = minidom.getDOMImplementation().createDocument(None, "allFiles",
+				None)
+		self._allFiles = dom.documentElement
+
+	def addFiles(self, *filePaths):
+		for path in filePaths:
+			dom = minidom.parse(path)
+			filesNode = dom.documentElement
+			self._allFiles.appendChild(filesNode)
 
 	def parse(self):
-		head = Group("", -1)
-		self._parseGroupNode(head, self._filesNode, self._projectName)
-		return head.getByIndex(0)
+		rootGroup = Group(self._projectName, 0)
+		self._parseFilesNode(rootGroup, self._allFiles.firstChild)
+		return rootGroup
+
+	def _parseFilesNode(self, rootGroup, filesNode):
+		for node in filesNode.childNodes:
+			self._parseNode(rootGroup, node, excludePatt=None)
+		if filesNode != self._allFiles.lastChild:
+			self._parseFilesNode(rootGroup, filesNode.nextSibling)
 
 	def _parseExclude(self, node, parentExclude=None):
 		excludeNode = getChildNodeByNodeName(node, "exclude")
@@ -136,9 +151,9 @@ class FilesParser(object):
 				parentGroup.depth+1, compiledExcludePatt)
 		parentGroup.add(group)
 
-	def _parseGroupNode(self, parentGroup, node, title=None, excludePatt=None):
+	def _parseGroupNode(self, parentGroup, node, excludePatt=None):
 		excludePatt = self._parseExclude(node, excludePatt)
-		title = title or node.getAttribute("title")
+		title = node.getAttribute("title")
 		group = Group(title, parentGroup.depth+1)
 		for c in node.childNodes:
 			self._parseNode(group, c, excludePatt)
@@ -162,11 +177,13 @@ class FilesParser(object):
 
 
 class SettingsParser(object):
-	def __init__(self, path):
-		self.path = path
-		self.rootDir = dirname(path)
-		self._dom = minidom.parse(path)
-		self.projectName = self._dom.documentElement.getAttribute("name")
+	def __init__(self, projectDir):
+		self.projectDir = abspath(projectDir)
+		self.rootDir = dirname(self.projectDir)
+		self.projectName = basename(projectDir).replace(".vcode", "")
 
-		filesNode = getChildNodeByNodeName(self._dom.documentElement, "files")
-		self.files = FilesParser(filesNode, self.rootDir, self.projectName).parse()
+		f = FilesParser(self.rootDir, self.projectName)
+		filePaths = glob(join(self.projectDir, "*.files.xml"))
+		filePaths.sort()
+		f.addFiles(*filePaths)
+		self.files = f.parse()
