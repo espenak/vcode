@@ -1,3 +1,28 @@
-<files>
-	<dir title="hello files" path="src"/>
-</files>
+<vcode>
+	<dir path="/src"/>
+	<dir path="/doc"/>
+	<file path="/README.txt"/>
+
+	<viewTemplate name="maven">
+		<group name="${dir}/java/main/">
+			<dir path="${dir}/src/main/java" ignoreExtension="yes" flatten="yes" pathsep="."
+				filter="java">
+		</group>
+		<group name="${dir}/java/test/">
+			<dir path="${dir}/src/main/java" ignoreExtension="yes" flatten="yes" pathsep="."
+				filter="java"/>
+		</group>
+
+		<group name="${dir}/python/">
+			<dir path="${dir}/src/main/python" ignoreExtension="yes" flatten="yes" pathsep=".">
+				<filter>+*.py</filter>
+			</dir>
+		</group>
+	</viewTemplate>
+
+
+	<view name="maven">
+		<viewTemplateLink name="maven" dir="/ui"/>
+		<viewTemplateLink name="maven" dir="/dir"/>
+	</view>
+</vcode>

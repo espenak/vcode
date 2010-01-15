@@ -24,33 +24,48 @@
 		main/
 		test/
 	-->
-	<group title="java">
-		<dir path="src/main/java" title="main"/>
-		<dir path="src/test/java" title="test"/>
-	</group>
-	<group title="python">
-		<dir path="src/main/python" title="main"/>
-		<dir path="src/test/python" title="test"/>
-		<file path="setup.py" title="setup.py"/>
-	</group>
+
 	<group title="cpp">
-		<dir path="src/main/cpp" title="main"/>
-		<dir path="src/test/cpp" title="test"/>
+		<group title="main">
+			<dir path="src/main/cpp"/>
+		</group>
+		<group title="test">
+			<dir path="src/test/cpp"/>
+		</group>
 	</group>
+
+	<group title="java">
+		<group title="main">
+			<dir path="src/main/java"/>
+		</group>
+		<group title="test">
+			<dir path="src/test/java"/>
+		</group>
+	</group>
+
+	<group title="python">
+		<group title="main">
+			<dir path="src/main/python"/>
+		</group>
+		<group title="test">
+			<dir path="src/test/python"/>
+		</group>
+	</group>
+
 
 	<!-- All files in the project -->
-	<dir title="all" path=""/>
+	<!--<dir title="all" path=""/>-->
 
 	<!-- *Absolutely* all files in the project - override *exclude*. -->
-	<dir title="absolutely all" path="">
-		<exclude inherit="no"/>
-	</dir>
+	<!--<dir title="absolutely all" path="">-->
+		<!--<exclude inherit="no"/>-->
+	<!--</dir>-->
 
-	<dir title="all except java files" path="">
-		<exclude inherit="yes">
-			<shellpatterns>
-				*.java
-			</shellpatterns>
-		</exclude>
-	</dir>
+	<!--<dir title="all except java files" path="">-->
+		<!--<exclude inherit="yes">-->
+			<!--<shellpatterns>-->
+				<!--*.java-->
+			<!--</shellpatterns>-->
+		<!--</exclude>-->
+	<!--</dir>-->
 </files>

@@ -1,9 +1,9 @@
-from glob import glob
 import re
-from os.path import isdir, join, dirname, abspath, basename
-from os import listdir, sep
+from os.path import isdir, join
+from os import listdir, sep, chdir
 import fnmatch
 from xml.dom import minidom
+import glob
 
 from file_memorymodel import Group, File
 from common import ENCODING
@@ -74,10 +74,15 @@ class PatternParser(object):
 
 
 
+class FilesParseException(Exception):
+	""" Raised when there is some parse error in the <files> config. """
+
+
 class FilesParser(object):
 	def __init__(self, rootDir, projectName):
 		self._rootDir = rootDir
 		self._projectName = projectName
+		chdir(rootDir)
 		dom  = minidom.getDOMImplementation().createDocument(None, "allFiles",
 				None)
 		self._allFiles = dom.documentElement
@@ -119,16 +124,28 @@ class FilesParser(object):
 			return parentExclude
 
 
+	def _parseFileSearchNode(self, parentGroup, node):
+		pattern = node.getAttribute("pattern")
+		print pattern
+		files = glob.glob(pattern)
+		for path in files:
+			print path
+			parentGroup.add(File(
+				basename(path),
+				path,
+				self.getAbsolutePath(path),
+				parentGroup.depth+1))
+
 	def _parseFileNode(self, parentGroup, node):
 		path = node.getAttribute("path")
 		parentGroup.add(File(
-			node.getAttribute("title"),
+			node.getAttribute("title") or path,
 			self.getRelativePath(path),
 			self.getAbsolutePath(path),
 			parentGroup.depth+1))
 
-	def _parseDir(self, title, path, depth, compiledExcludePatt):
-		g = Group(title, depth)
+	def _parseDir(self, title, path, depth, compiledExcludePatt, group=None):
+		g = group or Group(title, depth)
 		for f in listdir(self.getAbsolutePath(path)):
 			p = join(path, f)
 			if isdir(self.getAbsolutePath(p)):
@@ -146,10 +163,9 @@ class FilesParser(object):
 		else:
 			compiledExcludePatt = None
 		path = node.getAttribute("path")
-		title = node.getAttribute("title")
-		group = self._parseDir(title, path,
-				parentGroup.depth+1, compiledExcludePatt)
-		parentGroup.add(group)
+		self._parseDir(None, path,
+				parentGroup.depth, compiledExcludePatt,
+				parentGroup)
 
 	def _parseGroupNode(self, parentGroup, node, excludePatt=None):
 		excludePatt = self._parseExclude(node, excludePatt)
@@ -162,12 +178,19 @@ class FilesParser(object):
 	def _parseNode(self, parentGroup, node, excludePatt=None):
 		if node.nodeType != minidom.Node.ELEMENT_NODE:
 			return
+		if node.tagName == "group":
+			self._parseGroupNode(parentGroup, node, excludePatt=excludePatt)
+		elif node.tagName == "exclude":
+			return
+		elif not node.parentNode.tagName in ("group"):
+			raise FilesParseException("<%s> must be directly below a <group>."
+					% node.tagName)
 		elif node.tagName == "file":
 			self._parseFileNode(parentGroup, node)
+		elif node.tagName == "filesearch":
+			self._parseFileSearchNode(parentGroup, node)
 		elif node.tagName == "dir":
 			self._parseDirNode(parentGroup, node, excludePatt)
-		elif node.tagName == "group":
-			self._parseGroupNode(parentGroup, node, excludePatt=excludePatt)
 
 	def getRelativePath(self, relativePath):
 		return relativePath.replace(PATHNAME_SEP, sep)
@@ -177,13 +200,9 @@ class FilesParser(object):
 
 
 class SettingsParser(object):
-	def __init__(self, projectDir):
-		self.projectDir = abspath(projectDir)
-		self.rootDir = dirname(self.projectDir)
-		self.projectName = basename(projectDir).replace(".vcode", "")
-
-		f = FilesParser(self.rootDir, self.projectName)
-		filePaths = glob(join(self.projectDir, "*.files.xml"))
+	def __init__(self, projectDir, projectName, rootDir):
+		f = FilesParser(rootDir, projectName)
+		filePaths = glob.glob(join(projectDir, "*.files.xml"))
 		filePaths.sort()
 		f.addFiles(*filePaths)
 		self.files = f.parse()

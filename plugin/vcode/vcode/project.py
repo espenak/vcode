@@ -1,3 +1,6 @@
+from os.path import dirname, abspath, basename, join
+import logging
+import logging.handlers
 import sys
 import vim
 import fnmatch
@@ -202,29 +205,25 @@ class ProjectBrowser(object):
 
 
 
-
 ##############################################################
 # User Interface
 ##############################################################
 
 class Project(object):
-	def __init__(self, path):
-		#self.fileindex = FileIndex(
-			#Group("Project root", 0,
-				#File("myfile.txt", "~/Desktop/tullball.txt", 1),
-				#File("stuff.c", "~/Desktop/stuff.c", 1),
-				#File("stuff.h", "~/Desktop/stuff.h", 1),
-				#Group("Subdir", 1,
-					#File("thestuff.c", "~/Desktop/stuff.c", 2),
-					#File("thestuff.h", "~/Desktop/stuff.h", 2),
-					#Group("SubSubdir", 2,
-						#File("thastuff.c", "~/Desktop/stuff.c", 3),
-						#File("thastuff.h", "~/Desktop/stuff.h", 3)
-					#)
-				#)
-			#)
-		#)
-		settings = SettingsParser(path)
+	def __init__(self, projectDir):
+		self.projectDir = abspath(projectDir)
+		self.projectName = basename(self.projectDir).replace(".vcode", "")
+		self.rootDir = dirname(self.projectDir)
+
+		self.logFile = join(self.projectDir, "log")
+		self.log = logging.getLogger("vcode." + self.projectName)
+		self.log.setLevel(logging.info)
+		handler = logging.handlers.RotatingFileHandler(
+						self.logFile, maxBytes=1024*30, backupCount=0)
+		self.log.addHandler(handler)
+
+		settings = SettingsParser(self.projectDir, self.projectName,
+				self.rootDir)
 		self.fileindex = FileIndex(settings.files)
 
 		self.browser = ProjectBrowser(self.fileindex)

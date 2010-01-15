@@ -1,0 +1,26 @@
+<!--
+Filters match the path relative to the project root. Paths
+always start with /, so if you have a directory named "src" in your
+project, it's full path is /src, and if you have an "include"-directory
+witin the src directory, it's path will be "/src/include".
+-->
+<filters>
+	<filter name="java">
+		+*.java
+	</filter>
+
+	<filter name="ignorebuild" description="Ignore common build directories">
+		<!--
+		In programming pseudocode:
+			if path matches "/build":
+				ignore
+			else if path matches "*/bin":
+				ignore
+			else if path matches "*":
+				accept
+		-->
+		-*/build
+		-*/bin
+		+*
+	</filter>
+</filters>
