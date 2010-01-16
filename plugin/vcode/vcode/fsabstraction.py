@@ -1,5 +1,5 @@
 import re
-from os import sep, getcwd
+from os import sep, getcwd, walk
 from os.path import abspath, isdir, dirname
 
 
@@ -86,6 +86,14 @@ class FsIndex(object):
 	def addDir(self, path):
 		self._add(FsDir, path)
 
+	def addDirRecursive(self, path):
+		self.addDir(path)
+		for root, dirs, files in walk(path):
+			for d in dirs:
+				self.addDir(join(root, d))
+			for f in files:
+				self.addFile(join(root, f))
+
 	def addFile(self, path):
 		self._add(FsFile, path)
 
@@ -94,6 +102,7 @@ class FsIndex(object):
 
 	def getByVirtualPath(self, virtualPath):
 		return self._nodeDct[virtualPath]
+
 
 
 
@@ -110,14 +119,14 @@ if __name__ == "__main__":
 			chdir(self.tempDir)
 			self.rootDir = getcwd() # should have been able to use self.tempDir, but it seems to fuck up the path..
 			self.fileA = join(self.rootDir, "test.txt")
+			open(self.fileA, "w").write("")
 			self.i = FsIndex(self.rootDir)
 	
 		def tearDown(self):
 			rmtree(self.tempDir)
 
 		def testAdd(self):
-			self.i.add(self.rootDir)
-			self.i.add(self.fileA)
+			self.i.addDirRecursive(self.rootDir)
 			a = self.i.getByVirtualPath("/test.txt")
 			self.assertEquals(a.getVirtualPath(), "/test.txt")
 			self.assertEquals(a.getAbsPath(), self.fileA)
