@@ -32,7 +32,7 @@
 from os.path import normpath, basename
 
 
-class View(object):
+class NodeView(object):
 	""" A view is attached to every node in the datamodel.
 	It is used by the UI to display the node.
 	"""
@@ -62,7 +62,7 @@ class Node(object):
 
 	def __init__(self, name):
 		self.parent = None
-		self.view = View(name)
+		self.view = NodeView(name)
 
 	def refresh(self):
 		pass
@@ -134,14 +134,14 @@ if __name__ == "__main__":
 
 	class TestView(unittest.TestCase):
 		def testUnicode(self):
-			v = View("Hello")
+			v = NodeView("Hello")
 			self.assertEquals(unicode(v), u"Hello")
 			v.extraInfo["git"] = "[git:M]"
 			v.extraInfo["vim"] = "*"
 			self.assertEquals(unicode(v), u"Hello [git:M] *")
 
 		def testIterExtraInfoOrdered(self):
-			view = View("Hello")
+			view = NodeView("Hello")
 			view.extraInfo = dict(g="Two", a="One", z="Three")
 			self.assertEquals(
 					["One", "Two", "Three"],

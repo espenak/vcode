@@ -52,7 +52,7 @@ class FsIndex(object):
 		self._nodeDct = {}
 
 	def makeVirtualPath(self, absPath):
-		""" Make the absolute filesystem-path, *absPath*, into a virtual path
+		""" Turn the absolute filesystem-path, *absPath*, into a virtual path
 		relative to this FsIndex. """
 		p = absPath.replace(self._rootDir, "").replace(sep, VIRTPATH_SEP)
 		return p or "/"
